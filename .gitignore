@@ -1,4 +1,48 @@
-node_modules
-.next
-out
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# production builds / misc
+dist/
+build/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# env files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# local env overrides
 .env*.local
+
+# caches
+.turbo/
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# test coverage
+coverage/
+.nyc_output/
+
+# typescript
+*.tsbuildinfo
+
+# editor / os
+.DS_Store
+Thumbs.db
+ehthumbs.db
+.idea/
+.vscode/
+*.swp
