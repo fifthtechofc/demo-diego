@@ -144,6 +144,74 @@ async function upsertExtraction(
   if (error) throw new Error(`Falha ao salvar extração: ${error.message}`);
 }
 
+async function upsertCalendarEventFromExtraction(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  documentId: string,
+  fields: ParsedExtractionFields,
+) {
+  if (!fields.event_start_at) return;
+
+  const start_at = fields.event_start_at;
+  const end_at = fields.event_end_at ?? null;
+
+  const titleBase =
+    fields.surgery_name?.trim() ||
+    fields.patient_name?.trim() ||
+    "Evento do documento";
+
+  const title = fields.surgery_name ? `Procedimento: ${titleBase}` : titleBase;
+  const descriptionParts = [
+    fields.patient_name ? `Paciente: ${fields.patient_name}` : null,
+    fields.doctor_name ? `Médico: ${fields.doctor_name}` : null,
+    fields.hospital_name ? `Hospital: ${fields.hospital_name}` : null,
+    fields.surgery_date ? `Data extraída: ${fields.surgery_date}` : null,
+  ].filter(Boolean);
+
+  const description = descriptionParts.length ? descriptionParts.join("\n") : null;
+
+  // Como a unique é parcial (source='pdf'), fazemos "select then update/insert"
+  const { data: existing, error: selErr } = await supabase
+    .from("calendar_events")
+    .select("id")
+    .eq("document_id", documentId)
+    .eq("source", "pdf")
+    .maybeSingle();
+
+  if (selErr) throw new Error(`Falha ao buscar evento do calendário: ${selErr.message}`);
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("calendar_events")
+      .update({
+        title,
+        description,
+        start_at,
+        end_at,
+        category: "Procedimento",
+        color: "blue",
+        tags: ["PDF"],
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(`Falha ao atualizar evento do calendário: ${error.message}`);
+    return;
+  }
+
+  const { error } = await supabase.from("calendar_events").insert({
+    title,
+    description,
+    start_at,
+    end_at,
+    category: "Procedimento",
+    color: "blue",
+    tags: ["PDF"],
+    source: "pdf",
+    document_id: documentId,
+  });
+
+  if (error) throw new Error(`Falha ao criar evento do calendário: ${error.message}`);
+}
+
 export async function processDocumentById(documentId: string): Promise<void> {
   const supabase = createServiceRoleClient();
 
@@ -174,6 +242,7 @@ export async function processDocumentById(documentId: string): Promise<void> {
 
   await upsertExtraction(supabase, documentId, raw_text, fields);
   await replaceItems(supabase, documentId, items);
+  await upsertCalendarEventFromExtraction(supabase, documentId, fields);
 
   const { error: okErr } = await supabase
     .from("documents")

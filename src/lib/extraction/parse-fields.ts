@@ -490,6 +490,55 @@ function normalizeSurgeryDateForDb(v: string): string | null {
   return null;
 }
 
+function parseEventDatetimesFromSurgeryDate(surgeryDate: string | null): {
+  event_start_at: string | null;
+  event_end_at: string | null;
+  event_timezone: string | null;
+  event_datetime_raw: string | null;
+} {
+  if (!surgeryDate) {
+    return { event_start_at: null, event_end_at: null, event_timezone: null, event_datetime_raw: null };
+  }
+
+  const raw = NORM(surgeryDate);
+  if (!raw || isGarbageValue(raw)) {
+    return { event_start_at: null, event_end_at: null, event_timezone: null, event_datetime_raw: null };
+  }
+
+  // Expected: "YYYY-MM-DD" or "YYYY-MM-DD HH:MM"
+  const m = raw.match(/\b(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}):(\d{2}))?\b/);
+  if (!m?.[1]) {
+    return { event_start_at: null, event_end_at: null, event_timezone: null, event_datetime_raw: raw };
+  }
+
+  const date = m[1];
+  const hh = m[2];
+  const mm = m[3];
+
+  // São Paulo timezone (business default)
+  const event_timezone = "America/Sao_Paulo";
+
+  const startLocal = hh && mm ? `${date}T${hh}:${mm}:00` : `${date}T00:00:00`;
+  const start = new Date(`${startLocal}-03:00`);
+
+  if (hh && mm) {
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    return {
+      event_start_at: start.toISOString(),
+      event_end_at: end.toISOString(),
+      event_timezone,
+      event_datetime_raw: raw,
+    };
+  }
+
+  return {
+    event_start_at: start.toISOString(),
+    event_end_at: null,
+    event_timezone,
+    event_datetime_raw: raw,
+  };
+}
+
 export function parseCustomerDataBlock(rawText: string): {
   hospital_name?: string | null;
   address?: string | null;
@@ -893,6 +942,10 @@ export function emptyExtractionFields(): ParsedExtractionFields {
     representative: null,
     requester: null,
     requester_channel: null,
+    event_start_at: null,
+    event_end_at: null,
+    event_timezone: null,
+    event_datetime_raw: null,
   };
 }
 
@@ -1013,6 +1066,12 @@ export function parseExtractionFromText(raw: string): ParsedExtractionFields {
   // Segurança: se o banco estiver tipando `surgery_date` como timestamp,
   // normaliza para formato compatível ou grava null.
   out.surgery_date = out.surgery_date ? normalizeSurgeryDateForDb(out.surgery_date) : null;
+
+  const ev = parseEventDatetimesFromSurgeryDate(out.surgery_date);
+  out.event_start_at = ev.event_start_at;
+  out.event_end_at = ev.event_end_at;
+  out.event_timezone = ev.event_timezone;
+  out.event_datetime_raw = ev.event_datetime_raw;
 
   return out;
 }

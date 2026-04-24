@@ -34,6 +34,10 @@ export interface DocumentExtractionRow {
   representative: string | null;
   requester: string | null;
   requester_channel: string | null;
+  event_start_at: string | null;
+  event_end_at: string | null;
+  event_timezone: string | null;
+  event_datetime_raw: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +68,10 @@ export interface ParsedExtractionFields {
   representative: string | null;
   requester: string | null;
   requester_channel: string | null;
+  event_start_at: string | null;
+  event_end_at: string | null;
+  event_timezone: string | null;
+  event_datetime_raw: string | null;
 }
 
 export interface ParsedDocumentItem {
