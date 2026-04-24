@@ -69,12 +69,33 @@ export function PdfDocumentUpload() {
           method: "POST",
           body: fd,
         });
-        const json = (await res.json()) as {
-          document?: DocumentWithRelations;
-          error?: string;
-        };
-        if (!res.ok) throw new Error(json.error || "Falha no envio.");
-        const doc = json.document;
+        const ct = res.headers.get("content-type") ?? "";
+        const raw = await res.text();
+        const json =
+          ct.includes("application/json")
+            ? ((JSON.parse(raw) as unknown) as {
+                document?: DocumentWithRelations;
+                error?: string;
+              })
+            : null;
+
+        if (!res.ok) {
+          const location = res.headers.get("location");
+          const hint =
+            ct.includes("text/html") || raw.trimStart().startsWith("<")
+              ? "O servidor retornou HTML (provável erro/redirect no Vercel)."
+              : undefined;
+          const details = [
+            `HTTP ${res.status}`,
+            location ? `Location: ${location}` : null,
+            hint,
+          ]
+            .filter(Boolean)
+            .join(" • ");
+          throw new Error(json?.error || `${details}${details ? " — " : ""}${raw.slice(0, 280)}`.trim());
+        }
+
+        const doc = json?.document;
         if (!doc?.id) throw new Error("Resposta inválida do servidor.");
         toast.success("PDF processado com sucesso.");
         router.push(`/documents/${doc.id}`);
