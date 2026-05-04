@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import type { DocumentWithRelations } from "@/types/document";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BatchNav } from "@/components/documents/batch-nav";
 
 const clientFields: { key: keyof NonNullable<DocumentWithRelations["extraction"]>; label: string }[] = [
   { key: "hospital_name", label: "Hospital" },
@@ -97,6 +98,7 @@ export function DocumentDetailView({ doc }: { doc: DocumentWithRelations }) {
             </p>
           )}
         </div>
+        <BatchNav currentId={doc.id} />
       </div>
 
       <section className="rounded-2xl border border-zinc-800/80 bg-zinc-900/35 p-5 shadow-sm ring-1 ring-white/5 backdrop-blur sm:p-6">

@@ -233,6 +233,11 @@ export function EventManager({
     [view],
   );
 
+  const jumpToDate = useCallback((date: Date, targetView: View = "day") => {
+    setCurrentDate(new Date(date));
+    setView(targetView);
+  }, []);
+
   const getColorClasses = useCallback(
     (colorValue: string) => {
       const color = colors.find((c) => c.value === colorValue);
@@ -654,6 +659,7 @@ export function EventManager({
         <MonthView
           currentDate={currentDate}
           events={filteredEvents}
+          onDayClick={(date) => jumpToDate(date, "day")}
           onEventClick={(event) => {
             setSelectedEvent(event);
             setIsDialogOpen(true);
@@ -669,6 +675,7 @@ export function EventManager({
         <WeekView
           currentDate={currentDate}
           events={filteredEvents}
+          onDayHeaderClick={(date) => jumpToDate(date, "day")}
           onEventClick={(event) => {
             setSelectedEvent(event);
             setIsDialogOpen(true);
@@ -936,7 +943,10 @@ function EventCard({
         draggable
         onDragStart={() => onDragStart(event)}
         onDragEnd={onDragEnd}
-        onClick={() => onEventClick(event)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEventClick(event);
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className="relative cursor-pointer"
@@ -995,7 +1005,10 @@ function EventCard({
         draggable
         onDragStart={() => onDragStart(event)}
         onDragEnd={onDragEnd}
-        onClick={() => onEventClick(event)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEventClick(event);
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
@@ -1034,7 +1047,10 @@ function EventCard({
       draggable
       onDragStart={() => onDragStart(event)}
       onDragEnd={onDragEnd}
-      onClick={() => onEventClick(event)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEventClick(event);
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="relative"
@@ -1090,6 +1106,7 @@ function EventCard({
 function MonthView({
   currentDate,
   events,
+  onDayClick,
   onEventClick,
   onDragStart,
   onDragEnd,
@@ -1098,6 +1115,7 @@ function MonthView({
 }: {
   currentDate: Date;
   events: Event[];
+  onDayClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
   onDragStart: (event: Event) => void;
   onDragEnd: () => void;
@@ -1151,6 +1169,7 @@ function MonthView({
                 !isCurrentMonth && "bg-muted/30",
                 "hover:bg-accent/50",
               )}
+              onClick={() => onDayClick(day)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(day)}
             >
@@ -1189,6 +1208,7 @@ function MonthView({
 function WeekView({
   currentDate,
   events,
+  onDayHeaderClick,
   onEventClick,
   onDragStart,
   onDragEnd,
@@ -1197,6 +1217,7 @@ function WeekView({
 }: {
   currentDate: Date;
   events: Event[];
+  onDayHeaderClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
   onDragStart: (event: Event) => void;
   onDragEnd: () => void;
@@ -1232,13 +1253,21 @@ function WeekView({
       <div className="grid grid-cols-8 border-b">
         <div className="border-r p-2 text-center text-xs font-medium sm:text-sm">Hora</div>
         {weekDays.map((day) => (
-          <div key={day.toISOString()} className="border-r p-2 text-center text-xs font-medium last:border-r-0 sm:text-sm">
+          <button
+            key={day.toISOString()}
+            type="button"
+            onClick={() => onDayHeaderClick(day)}
+            className={cn(
+              "border-r p-2 text-center text-xs font-medium last:border-r-0 sm:text-sm transition-colors hover:bg-accent/50",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            )}
+          >
             <div className="hidden sm:block">{day.toLocaleDateString("pt-BR", { weekday: "short" })}</div>
             <div className="sm:hidden">{day.toLocaleDateString("pt-BR", { weekday: "narrow" })}</div>
             <div className="text-[10px] text-muted-foreground sm:text-xs">
               {day.toLocaleDateString("pt-BR", { month: "short", day: "numeric" })}
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <div className="grid grid-cols-8">

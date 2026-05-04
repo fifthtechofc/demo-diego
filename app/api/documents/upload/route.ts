@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import {
   getDocumentWithRelations,
   markDocumentError,
-  processDocumentById,
   uploadPdfAndCreateDocument,
 } from "@/services/document.service";
 
@@ -21,10 +20,8 @@ export async function POST(req: Request) {
 
     const { id } = await uploadPdfAndCreateDocument(file);
     documentId = id;
-
-    await processDocumentById(id);
-
     const full = await getDocumentWithRelations(id);
+    // Processing is done via `/api/documents/process` to avoid request timeouts on batch uploads.
     return NextResponse.json({ document: full });
   } catch (e) {
     console.error("[POST /api/documents/upload] error", e);
